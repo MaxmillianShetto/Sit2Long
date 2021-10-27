@@ -1,0 +1,2 @@
+rootProject.name = "Sit2Long"
+include ':app'
