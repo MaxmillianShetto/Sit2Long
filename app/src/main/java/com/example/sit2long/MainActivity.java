@@ -8,6 +8,7 @@ import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.pm.PackageManager;
 import android.os.Bundle;
+import android.os.SystemClock;
 import android.text.TextUtils;
 import android.util.Log;
 import android.view.View;
@@ -22,6 +23,7 @@ import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
 
+import com.google.android.gms.common.internal.safeparcel.SafeParcelableSerializer;
 import com.google.android.gms.location.ActivityRecognition;
 import com.google.android.gms.location.ActivityTransition;
 import com.google.android.gms.location.ActivityTransitionEvent;
@@ -53,6 +55,7 @@ public class MainActivity extends AppCompatActivity
 
     private Button timerButton;
     private Button toggleOnOffButton;
+    private Button changeActivityButton;
 
     private TextView activityTextView;
 
@@ -68,30 +71,6 @@ public class MainActivity extends AppCompatActivity
     private ActivityTimer activityTimer;
     private Chronometer chronometer;
 
-    private static String toActivityString(int activity)
-    {
-        switch (activity)
-        {
-            case DetectedActivity.STILL:
-                return "STILL";
-            default:
-                return "UNKNOWN";
-        }
-    }
-
-    private static String toTransitionType(int transitionType)
-    {
-        switch (transitionType)
-        {
-            case ActivityTransition.ACTIVITY_TRANSITION_ENTER:
-                return "ENTER";
-            case ActivityTransition.ACTIVITY_TRANSITION_EXIT:
-                return "EXIT";
-            default:
-                return "UNKNOWN";
-        }
-    }
-
     @Override
     protected void onCreate(Bundle savedInstanceState)
     {
@@ -104,8 +83,9 @@ public class MainActivity extends AppCompatActivity
 
         activityTimer = new ActivityTimer(chronometer, activityTextView, this);
 
-        timerButton = findViewById(R.id.button4);
+        timerButton = findViewById(R.id.timerButton);
         toggleOnOffButton = findViewById(R.id.toggleOnOffButton);
+        changeActivityButton = findViewById(R.id.activityChangeButton);
 
         activityTrackingEnabled = false;
         timerStarted = false;
@@ -158,7 +138,8 @@ public class MainActivity extends AppCompatActivity
 
 
     @Override
-    protected void onStop() {
+    protected void onStop()
+    {
 
         // TODO: Unregister activity transition receiver when user leaves the app.
 
@@ -301,7 +282,7 @@ public class MainActivity extends AppCompatActivity
             {
                 enableActivityTransitions();
                 // TODO: replace with string from input fields
-                activityTimer.setActivityTime(0,0, 10);
+                activityTimer.setActivityTime(0, 0, 10);
             }
 
         }
@@ -320,6 +301,40 @@ public class MainActivity extends AppCompatActivity
                 toast.show();
             }
         }
+    }
+
+    boolean isStill = true;
+
+    public void changeActivityState(View view)
+    {
+        Intent intent = new Intent();
+        intent.setAction(TRANSITIONS_RECEIVER_ACTION);
+        List<ActivityTransitionEvent> events = new ArrayList<>();
+        ActivityTransitionEvent transitionEvent;
+        if (isStill)
+        {
+            transitionEvent = new ActivityTransitionEvent(DetectedActivity.STILL,
+                    ActivityTransition.ACTIVITY_TRANSITION_EXIT, SystemClock.elapsedRealtimeNanos());
+            events.add(transitionEvent);
+            transitionEvent = new ActivityTransitionEvent(DetectedActivity.WALKING,
+                    ActivityTransition.ACTIVITY_TRANSITION_ENTER, SystemClock.elapsedRealtimeNanos());
+            events.add(transitionEvent);
+        }
+        else
+        {
+
+            transitionEvent = new ActivityTransitionEvent(DetectedActivity.WALKING,
+                    ActivityTransition.ACTIVITY_TRANSITION_EXIT, SystemClock.elapsedRealtimeNanos());
+            events.add(transitionEvent);
+            transitionEvent = new ActivityTransitionEvent(DetectedActivity.STILL,
+                    ActivityTransition.ACTIVITY_TRANSITION_ENTER, SystemClock.elapsedRealtimeNanos());
+            events.add(transitionEvent);
+        }
+        isStill = !isStill;
+        ActivityTransitionResult result = new ActivityTransitionResult(events);
+        SafeParcelableSerializer.serializeToIntentExtra(result, intent,
+                "com.google.android.location.internal.EXTRA_ACTIVITY_TRANSITION_RESULT");
+        sendBroadcast(intent);
     }
 
     private void printToScreen(@NonNull String message)
@@ -348,34 +363,33 @@ public class MainActivity extends AppCompatActivity
             }
 
             // TODO: Extract activity transition information from listener.
-            if (ActivityTransitionResult.hasResult(intent))
+            if (!ActivityTransitionResult.hasResult(intent))
             {
-                String activityType = "";
-                String transitionType = "";
+                return;
+            }
 
-                ActivityTransitionResult result = ActivityTransitionResult.extractResult(intent);
+            ActivityTransitionResult result = ActivityTransitionResult.extractResult(intent);
 
-                for (ActivityTransitionEvent event : result.getTransitionEvents())
+            for (ActivityTransitionEvent event : result.getTransitionEvents())
+            {
+                if (DetectedActivity.STILL == event.getActivityType())
                 {
-                    activityType = toActivityString(event.getActivityType());
-                    if (activityType.equals("STILL") )
-                    {
-                        if (!timerStarted)
-                        {
-                            activityTimer.startTimer(activityTextView);
-                            printToScreen(activityType);
-                            timerStarted = true;
-                        }
-                    }
-                    else
-                    {
-                        if (timerStarted)
-                        {
-                            activityTimer.stopTimer();
-                            printToScreen(activityType);
-                            timerStarted = false;
-                        }
-                    }
+                    continue;
+                }
+
+                boolean enteringStill = ActivityTransition.ACTIVITY_TRANSITION_ENTER == event.getTransitionType();
+                boolean leavingStill = !enteringStill;
+                if (enteringStill && !timerStarted)
+                {
+                    activityTimer.startTimer(activityTextView);
+                    printToScreen("Started timer");
+                    timerStarted = true;
+                }
+                else if (leavingStill && timerStarted)
+                {
+                    activityTimer.stopTimer();
+                    printToScreen("Stopped timer");
+                    timerStarted = false;
                 }
             }
         }
