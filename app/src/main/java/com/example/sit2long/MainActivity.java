@@ -8,12 +8,14 @@ import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.pm.PackageManager;
 import android.os.Bundle;
-import android.os.SystemClock;
+import android.text.Layout;
 import android.text.TextUtils;
 import android.util.Log;
 import android.view.View;
 import android.widget.Button;
 import android.widget.Chronometer;
+import android.widget.EditText;
+import android.widget.LinearLayout;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -23,11 +25,9 @@ import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
 
-import com.google.android.gms.common.internal.safeparcel.SafeParcelableSerializer;
 import com.google.android.gms.location.ActivityRecognition;
 import com.google.android.gms.location.ActivityTransition;
 import com.google.android.gms.location.ActivityTransitionEvent;
-import com.google.android.gms.location.ActivityTransitionRequest;
 import com.google.android.gms.location.ActivityTransitionResult;
 import com.google.android.gms.location.DetectedActivity;
 import com.google.android.gms.tasks.OnFailureListener;
@@ -52,10 +52,22 @@ public class MainActivity extends AppCompatActivity
 
     private boolean activityTrackingEnabled;
     private boolean timerStarted;
+    private boolean showTimer;
 
     private Button timerButton;
     private Button toggleOnOffButton;
-    private Button changeActivityButton;
+    private Button saveTimeButton;
+
+    private EditText hoursEditText;
+    private EditText minutesEditText;
+    private EditText secondsEditText;
+
+    private LinearLayout timerLayout;
+
+    private int hoursSet;
+    private int minutesSet;
+    private int secondsSet;
+
 
     private TextView activityTextView;
 
@@ -71,13 +83,19 @@ public class MainActivity extends AppCompatActivity
     private ActivityTimer activityTimer;
     private Chronometer chronometer;
 
+
     @Override
     protected void onCreate(Bundle savedInstanceState)
     {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
+        timerLayout = findViewById(R.id.timerLayout);
         activityTextView = findViewById(R.id.activityStatusTextView);
+
+        hoursEditText = findViewById(R.id.hoursEditText);
+        minutesEditText = findViewById(R.id.minutesEditText);
+        secondsEditText = findViewById(R.id.secondsEditText);
 
         chronometer = (Chronometer) findViewById(R.id.chronometer);
 
@@ -85,10 +103,11 @@ public class MainActivity extends AppCompatActivity
 
         timerButton = findViewById(R.id.timerButton);
         toggleOnOffButton = findViewById(R.id.toggleOnOffButton);
-        changeActivityButton = findViewById(R.id.activityChangeButton);
+        saveTimeButton = findViewById(R.id.saveTimeButton);
 
         activityTrackingEnabled = false;
         timerStarted = false;
+        showTimer = false;
 
         // List of activity transitions to track.
         activityTransitionList = new ArrayList<>();
@@ -259,6 +278,34 @@ public class MainActivity extends AppCompatActivity
         }
     }
 
+    public void setTimer(View view)
+    {
+        if (!showTimer)
+        {
+            timerLayout.setVisibility(View.VISIBLE);
+            showTimer = true;
+        }
+        else
+        {
+            timerLayout.setVisibility(View.INVISIBLE);
+            showTimer = false;
+        }
+    }
+
+    // OnClick method that gets the current time and initializes the timer value
+    public void saveTime(View view)
+    {
+        hoursSet = Integer.parseInt(hoursEditText.getText().toString());
+        minutesSet = Integer.parseInt(minutesEditText.getText().toString());
+        secondsSet = Integer.parseInt(secondsEditText.getText().toString());
+
+        activityTimer.setActivityTime(hoursSet, minutesSet, secondsSet);
+
+        timerLayout.setVisibility(View.INVISIBLE);
+        showTimer = false;
+    }
+
+    // OnClick method to toggle the activity tracking on and off
     public void toggleActivityRecognitionOnOff(View view)
     {
 
@@ -278,8 +325,8 @@ public class MainActivity extends AppCompatActivity
             else
             {
                 enableActivityTransitions();
-                // TODO: replace with string from input fields
-                activityTimer.setActivityTime(0, 0, 10);
+                activityTimer.startTimer(activityTextView);
+                timerStarted = true;
             }
 
         }
@@ -298,40 +345,6 @@ public class MainActivity extends AppCompatActivity
                 toast.show();
             }
         }
-    }
-
-    boolean isStill = true;
-
-    public void changeActivityState(View view)
-    {
-        Intent intent = new Intent();
-        intent.setAction(TRANSITIONS_RECEIVER_ACTION);
-        List<ActivityTransitionEvent> events = new ArrayList<>();
-        ActivityTransitionEvent transitionEvent;
-        if (isStill)
-        {
-            transitionEvent = new ActivityTransitionEvent(DetectedActivity.STILL,
-                    ActivityTransition.ACTIVITY_TRANSITION_EXIT, SystemClock.elapsedRealtimeNanos());
-            events.add(transitionEvent);
-            transitionEvent = new ActivityTransitionEvent(DetectedActivity.WALKING,
-                    ActivityTransition.ACTIVITY_TRANSITION_ENTER, SystemClock.elapsedRealtimeNanos());
-            events.add(transitionEvent);
-        }
-        else
-        {
-
-            transitionEvent = new ActivityTransitionEvent(DetectedActivity.WALKING,
-                    ActivityTransition.ACTIVITY_TRANSITION_EXIT, SystemClock.elapsedRealtimeNanos());
-            events.add(transitionEvent);
-            transitionEvent = new ActivityTransitionEvent(DetectedActivity.STILL,
-                    ActivityTransition.ACTIVITY_TRANSITION_ENTER, SystemClock.elapsedRealtimeNanos());
-            events.add(transitionEvent);
-        }
-        isStill = !isStill;
-        ActivityTransitionResult result = new ActivityTransitionResult(events);
-        SafeParcelableSerializer.serializeToIntentExtra(result, intent,
-                "com.google.android.location.internal.EXTRA_ACTIVITY_TRANSITION_RESULT");
-        sendBroadcast(intent);
     }
 
     private void printToScreen(@NonNull String message)
