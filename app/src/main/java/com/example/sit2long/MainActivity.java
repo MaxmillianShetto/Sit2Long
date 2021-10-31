@@ -295,9 +295,19 @@ public class MainActivity extends AppCompatActivity
     // OnClick method that gets the current time and initializes the timer value
     public void saveTime(View view)
     {
-        hoursSet = Integer.parseInt(hoursEditText.getText().toString());
-        minutesSet = Integer.parseInt(minutesEditText.getText().toString());
-        secondsSet = Integer.parseInt(secondsEditText.getText().toString());
+        String hours = hoursEditText.getText().toString();
+        String minutes = minutesEditText.getText().toString();
+        String seconds = secondsEditText.getText().toString();
+
+        if (hours.equals("") || minutes.equals("") || seconds.equals(""))
+        {
+            Toast toast = Toast.makeText(getApplicationContext(), "time fields cannot be empty", Toast.LENGTH_LONG);
+            return;
+        }
+
+        hoursSet = Integer.parseInt(hours);
+        minutesSet = Integer.parseInt(minutes);
+        secondsSet = Integer.parseInt(seconds);
 
         activityTimer.setActivityTime(hoursSet, minutesSet, secondsSet);
 
