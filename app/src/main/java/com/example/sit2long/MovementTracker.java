@@ -2,6 +2,7 @@ package com.example.sit2long;
 
 import android.app.IntentService;
 import android.content.Intent;
+import android.util.Log;
 
 
 import androidx.annotation.Nullable;
@@ -30,7 +31,7 @@ public class MovementTracker extends IntentService {
         for(DetectedActivity activity : activities){
             switch (activity.getType()){
                 case DetectedActivity.STILL:
-                    System.out.println("--------------------------Wake up man ----------------------");
+                    Log.i("Info","--------------------------Wake up man ----------------------");
 
             }
         }

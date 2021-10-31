@@ -1,3 +1,8 @@
 <resources>
     <string name="app_name">Sit2Long</string>
+    <string name="colon">:</string>
+    <string name="zero">00</string>
+    <string name="initial_time">00:00:00</string>
+    <string name="sitting_too_long">You have been sitting for too long</string>
+    <string name="initial_status_message">Hello! welcome to our sitting tracker</string>
 </resources>
