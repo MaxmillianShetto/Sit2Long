@@ -129,10 +129,10 @@ public class MainActivity extends AppCompatActivity
     {
 
         // TODO: Disable activity transitions when user leaves the app.
-        if (activityTrackingEnabled)
-        {
-            disableActivityTransitions();
-        }
+//        if (activityTrackingEnabled)
+//        {
+//            disableActivityTransitions();
+//        }
         super.onPause();
     }
 
@@ -175,12 +175,9 @@ public class MainActivity extends AppCompatActivity
         Log.d(TAG, "enableActivityTransitions()");
 
 
-        // TODO: Create request and listen for activity changes.
-        ActivityTransitionRequest request = new ActivityTransitionRequest(activityTransitionList);
-
         // Register for Transitions Updates.
         Task<Void> task = ActivityRecognition.getClient(this)
-                .requestActivityTransitionUpdates(request, activityTransitionsPendingIntent);
+        .requestActivityUpdates(5000, activityTransitionsPendingIntent);
 
         task.addOnSuccessListener(
                 new OnSuccessListener<Void>()
@@ -365,10 +362,13 @@ public class MainActivity extends AppCompatActivity
             // TODO: Extract activity transition information from listener.
             if (!ActivityTransitionResult.hasResult(intent))
             {
+                Log.d(TAG, "empty");
+
                 return;
             }
 
             ActivityTransitionResult result = ActivityTransitionResult.extractResult(intent);
+            Log.d(TAG, "result(): " + result.getTransitionEvents());
 
             for (ActivityTransitionEvent event : result.getTransitionEvents())
             {
