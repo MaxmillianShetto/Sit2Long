@@ -302,6 +302,7 @@ public class MainActivity extends AppCompatActivity
         if (hours.equals("") || minutes.equals("") || seconds.equals(""))
         {
             Toast toast = Toast.makeText(getApplicationContext(), "time fields cannot be empty", Toast.LENGTH_LONG);
+            toast.show();
             return;
         }
 
